@@ -1,0 +1,78 @@
+//------------------------------------------------
+//--- 010 Editor v16.0.3 Binary Template
+//
+//      File: ENGLISH.TXT
+//   Authors: AkvenJan
+//   Version: v4
+//   Purpose: For Discworld 1 (PC and PSX) — группировка по аудио
+//  Category: Game files
+// File Mask: ENGLISH.TXT
+//  ID Bytes: 01 00 34 33 E8 09 00 00 00
+//   History:
+//     v3: typedef TextBlock, local вне цикла, условие length>0
+//     v4: учёт EOF-маркера (01 00 34 33 00 00 00 00 00 00)
+//------------------------------------------------
+
+// Тип TextBlock — определяется один раз, используется везде
+typedef struct {
+    ubyte length;
+    if(length > 0) { char text[length]; }
+} TextBlock;
+
+local int64  pos;
+local int64  subPos;
+local int    audioIndex = 0;
+local uint32 peekPos;
+
+while(!FEof())
+{
+    pos = FTell();
+
+    if(ReadUByte(pos)   == 0x01 &&
+       ReadUByte(pos+1) == 0x00 &&
+       ReadUByte(pos+2) == 0x34 &&
+       ReadUByte(pos+3) == 0x33)
+    {
+        peekPos = ReadUInt(pos + 4);
+
+        // EOF-маркер: позиция = 0
+        if(peekPos == 0)
+        {
+            struct EOFMarker
+            {
+                byte   tag[4];       // 01 00 34 33
+                uint32 position;     // 00 00 00 00 — признак конца файла
+                byte   tail[2];      // 00 00 — завершающие байты
+            } EOF;
+            break;
+        }
+
+        struct AudioGroup
+        {
+            byte   tag[4];           // 01 00 34 33 — признак
+            uint32 position;         // позиция в English.smp
+
+            while(!FEof())
+            {
+                subPos = FTell();
+
+                if(ReadUByte(subPos)   == 0x01 &&
+                   ReadUByte(subPos+1) == 0x00 &&
+                   ReadUByte(subPos+2) == 0x34 &&
+                   ReadUByte(subPos+3) == 0x33)
+                {
+                    break;
+                }
+
+                TextBlock Text;
+            }
+        } Group;
+
+        audioIndex++;
+    }
+    else
+    {
+        FSeek(pos);
+        TextBlock Text;
+    }
+}
