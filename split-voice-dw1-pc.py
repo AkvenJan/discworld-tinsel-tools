@@ -1,9 +1,13 @@
+﻿#!/usr/bin/env python3
 
+import os
 import struct
 import wave
 
 smpFile = open('ENGLISH.SMP', 'rb')
 idxFile = open('ENGLISH.IDX', 'rb')
+
+os.makedirs('VOICES', exist_ok=True)
 
 count = 0
 idxFile.seek(0, 2)
