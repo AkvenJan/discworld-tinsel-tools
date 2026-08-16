@@ -1,0 +1,111 @@
+//------------------------------------------------
+//--- 010 Editor v16.0.3 Binary Template
+//
+//      File: SCN.bt
+//   Authors: AkvenJan
+//   Version: 1.0
+//   Purpose: Parse Discworld SCN scene files
+//  Category: Game files
+// File Mask: *.scn
+//  ID Bytes: ?? ?? 34 33
+//   History:
+//------------------------------------------------
+
+// SCN files are chunk-based. Each chunk header:
+//   uint16 chunk_type
+//   uint16 magic        (always 0x3334, bytes "34 33")
+//   uint32 next_offset  (absolute offset of next chunk; 0 = end of file)
+// Followed by chunk data of size (next_offset - current_pos).
+// The last chunk has next_offset = 0; its data runs to EOF.
+//
+// Known chunk types:
+//   0x0002 - header chunk (empty data)
+//   0x0006 - graphics chunk: array of 16-byte image descriptors
+
+local int64 pos;
+local int64 nextOff;
+local ushort chunkType;
+local ushort magic;
+local int dataSize;
+local int i;
+
+enum <uint16> SCN_CHUNK_TYPE
+{
+    CHUNK_HEADER    = 2,
+    CHUNK_IMAGE  = 6
+};  
+
+while (!FEof())
+{
+    pos = FTell();
+    chunkType = ReadUShort(pos);
+    magic     = ReadUShort(pos + 2);
+
+    // Stop if the magic is wrong (end of chunk stream / garbage)
+    if (magic != 0x3334)
+        break;
+
+    nextOff = ReadUInt(pos + 4);
+
+    if (nextOff == 0)
+        dataSize = FileSize() - (pos + 8);
+    else
+        dataSize = nextOff - (pos + 8);
+
+    if (dataSize < 0)
+        break;
+
+    FSeek(pos);
+    struct Chunk
+    {
+        
+        SCN_CHUNK_TYPE chunk_type;
+        uint16 magic;        // always 0x3334
+        uint32 next_offset;  // absolute offset of next chunk (0 = last)
+
+        if (chunk_type == 6)
+        {
+            // Graphics chunk: consecutive 16-byte image descriptors
+            local int blocks = dataSize / 16;
+            for (i = 0; i < blocks; ++i)
+            {
+                struct GraphicBlock
+                {
+                    // Bit 15 may be a flag; real dimension = value & 0x7FFF
+                    uint16 width;
+                    uint16 height;
+                    // Bits per pixel / format hint
+                    uint32 nbits;
+                    // Absolute offset of the pixel data inside the file.
+                    // The unpacker seeks to (offset + 4) & 0x7FFFFF
+                    uint32 offset;
+                    // Absolute offset of the palette data (if any)
+                    uint32 offset_pal;
+
+                    // Inline pixel data: jump to the data offset,
+                    // read width*height bytes, then return.
+                    local int w = width  & 0x7FFF;
+                    local int h = height & 0x7FFF;
+                    local int64 savePos = FTell();
+                    FSeek((offset + 4) & 0x7FFFFF);
+                    ubyte pixels[w * h];
+                    FSeek(savePos);
+                } block;
+            }
+        }
+        else if (chunk_type == 2)
+        {
+            // Header chunk: data is always empty
+        }
+        else
+        {
+            // Unknown chunk type: keep raw bytes for inspection
+            ubyte data[dataSize];
+        }
+    } chunk;
+
+    if (nextOff == 0)
+        break;
+
+    FSeek(nextOff);
+}

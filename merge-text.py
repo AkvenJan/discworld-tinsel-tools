@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import struct
 size = 0
 with open('ENGLISH-NEW.TXT', 'wb') as pFile:
