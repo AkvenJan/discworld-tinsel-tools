@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 
 import struct
-import wave
 
 smpFile = open('ENGLISH-NEW.SMP', 'wb')
 idxFile = open('ENGLISH.IDX', 'rb')
@@ -14,18 +13,19 @@ size = size // 4
 idxCount = size
 idxFile.seek(0, 0)
 written = 4
-smpFile.write(b'\x2e\xa1\x08\x00')
+smpFile.write(b'FLAC')
 while idxCount > 0:
     position = struct.unpack('<I', idxFile.read(4))[0]
     if position == 0:
         nidxFile.write(struct.pack('<I', 0))
         # written += 4
     else:
-        with open('VOICES/sample-{}.wav'.format(size - idxCount), 'rb') as wavFile:
+        with open('VOICES/sample-{}.flac'.format(size - idxCount), 'rb') as flacFile:
+            flac_data = flacFile.read()
+            length = len(flac_data)
             nidxFile.write(struct.pack('<I', written))
-            data = wavFile.read().split(b'data')
-            length = struct.unpack('<I', data[1][:4])[0]
-            smpFile.write(data[1])
+            smpFile.write(struct.pack('<I', length))   # заголовок длины, LE — теперь нужен
+            smpFile.write(flac_data)                    # сырые байты FLAC как есть
             written += length + 4
     idxCount -= 1
 
