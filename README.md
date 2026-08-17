@@ -3,7 +3,7 @@ Scripts and utilities for Discworld games based on Tinsel engine
 
 Forked from https://github.com/adventurebrew/kolminey
 
-I needed to modify tools to support PSX version of Discworld 1 game
+I took those sources and modified them to support PSX version of Discworld 1 game
 
 ## Audio formats
 
@@ -13,13 +13,13 @@ I needed to modify tools to support PSX version of Discworld 1 game
 | Discworld 1 PSX| XA-ADPCM 4-bit (Sony SPU)       | 44100 Hz    | mono     | 16-bit 44100 Hz WAV      |
 | Discworld 2 PC | Tinsel ADPCM 6-bit (custom)     | 22050 Hz    | mono     | 16-bit 22050 Hz WAV      |
 
-The PSX version stores voice samples as Sony XA-ADPCM inside `ENGLISH.SMP`, indexed by `ENGLISH.IDX`. The PC version stores the same samples as raw 8-bit unsigned PCM. Both are unpacked to standard WAV files.
+The PSX version stores voice samples as Sony XA-ADPCM inside `ENGLISH.SMP`, indexed by `ENGLISH.IDX`. The PC version stores the same samples as raw 8-bit unsigned PCM. Both can be unpacked to standard WAV files.
 
 ## Scripts
 
 ### `split-text.py`
 
-Parses `english.txt` — the game's text resource for both PC and PSX versions — into a plain-text file with one line per speech line, prefixed by the actor/speaker number:
+Parses `english.txt` — the game's text resource for both PC and PSX versions — into a plain-text file with one line per speech line, prefixed by the actor/speaker number. Format of the file is identical for both PC and PSX. There is a template in `/research` folder for 010 Editor with description of file structure:
 
 ```
 0 "So what happened?"
@@ -29,7 +29,7 @@ That's just the point."
 1 "My stick! They all want my magic stick!"
 ```
 
-The speaker index corresponds to the voice sample referenced by the same line in the script data, so the output can be matched against the extracted `.wav` files.
+The speaker index corresponds to the voice sample referenced by the same line in the script data, so the output can be matched against the extracted `.wav` files. I didn't research the accurate correlation. Maybe later
 
 ### `split-voice-dw1-pc.py`
 
@@ -49,6 +49,14 @@ Unpacks voice samples from the **PSX** version of Discworld 1.
 - Writes each sample to `VOICES/sample-N.wav` (44100 Hz, mono, 16-bit).
 
 The XA-ADPCM decoder follows the same algorithm as ScummVM's`audio/decoders/xa.cpp` (`Audio::makeXAStream`), which is the path used by the Tinsel engine for `TinselV1PSX` in `engines/tinsel/sound.cpp`.
+
+### `merge-text.py`
+
+Reassembles a new `ENGLISH-NEW.TXT` from the `DIALOGUE/` folder produced by `split-text.py` 
+
+- Opens `DIALOGUE\ENGLISH-PARTxxxx.TXT` and merge them following the format
+
+I didn't the split - merge functional of these two scripts
 
 ### `merge-voice-dw1-wav.py`
 
