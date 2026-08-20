@@ -98,7 +98,7 @@ That idea worked — the samples can be re-encoded freely. The limitation that r
 
 - `merge-voice-dw1-wav.py` have to rebuild the SMP using the **same bit depth and sample rate** as the original files they replace (PSX 16-bit / 44100 Hz / mono needed to be downconverted to 8-bit / 22050 Hz / mono before merging)
 
-- `merge-voice-dw1-flac.py` merge compressed Flac samples with **any bit depth and sample rate**
+- `merge-voice-dw1-compressed.py` merge compressed FLAC/MP3/OGG samples with **any bit depth and sample rate**
 
   ## A note on PC and PSX differences
 
