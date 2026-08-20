@@ -12,7 +12,7 @@ os.makedirs('VOICES', exist_ok=True)
 count = 0
 idxFile.seek(0, 2)
 size = idxFile.tell()
-size = size / 4
+size = size // 4
 idxCount = size
 idxFile.seek(0, 0)
 while idxCount > 0:
