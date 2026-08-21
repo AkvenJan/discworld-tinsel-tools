@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 
 import argparse
 import os
@@ -16,8 +16,9 @@ def main():
     parser = argparse.ArgumentParser(
         prog='merge-voice.py',
         description='Merge ENGLISH-NEW.SMP and ENGLISH-NEW.IDX from original ENGLISH.IDX and compressed audio samples.',
-        epilog='Sciprt need original ENGLISH.IDX and samples in VOICES/ folder.\n'
-               'Supported formats: FLAC, MP3, OGG.',
+        epilog='Script needs original ENGLISH.IDX and samples in VOICES/ folder.\n'
+               'Supported formats: FLAC, MP3, OGG.\n'
+               'Samples that exist in VOICES/ are written even if their IDX entry is 0.',
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
@@ -47,27 +48,31 @@ def main():
     smpFile.write(signature)   # сигнатура в начале SMP (big-endian)
     indexNo = 0
     missing = 0
+    added = 0   # count of samples added that had idx==0 originally
 
     while idxCount > 0:
         position = struct.unpack('<I', idxFile.read(4))[0]
-        if position == 0:
-            if indexNo == 0:
-                nidxFile.write(signature)
-            else:
-                nidxFile.write(struct.pack('<I', 0))
+        sample_no = size - idxCount
+        sample_path = 'VOICES/sample-{}.{}'.format(sample_no, ext)
+
+        if indexNo == 0:
+            # Первая запись — заголовок/сигнатура, не аудио
+            nidxFile.write(signature)
+        elif os.path.exists(sample_path):
+            with open(sample_path, 'rb') as sampleFile:
+                data = sampleFile.read()
+                length = len(data)
+                nidxFile.write(struct.pack('<I', written))
+                smpFile.write(struct.pack('<I', length))   # заголовок длины, LE
+                smpFile.write(data)                         # сырые байты как есть
+                written += length + 4
+                if position == 0:
+                    added += 1   # был нулевой в IDX, но файл добавлен
         else:
-            sample_path = 'VOICES/sample-{}.{}'.format(size - idxCount, ext)
-            if not os.path.exists(sample_path):
+            if position != 0:
                 missing += 1
-                nidxFile.write(struct.pack('<I', 0))   # пустой слот — сохраняем структуру IDX
-            else:
-                with open(sample_path, 'rb') as sampleFile:
-                    data = sampleFile.read()
-                    length = len(data)
-                    nidxFile.write(struct.pack('<I', written))
-                    smpFile.write(struct.pack('<I', length))   # заголовок длины, LE
-                    smpFile.write(data)                         # сырые байты как есть
-                    written += length + 4
+            nidxFile.write(struct.pack('<I', 0))   # пустой слот — сохраняем структуру IDX
+
         idxCount -= 1
         indexNo += 1
 
@@ -78,7 +83,9 @@ def main():
     print('Ready: format={}'.format(fmt_name))
     print('  ENGLISH-NEW.SMP and ENGLISH-NEW.IDX created')
     if missing:
-        print('  Error: {} samples in {} format missing in VOICES/'.format(missing,ext))
+        print('  Error: {} samples in {} format missing in VOICES/ but were present in original IDX'.format(missing, ext))
+    if added:
+        print('  Added: {} samples found in VOICES/ that had zero entry in original IDX'.format(added))
 
 if __name__ == '__main__':
     main()

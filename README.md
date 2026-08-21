@@ -78,10 +78,12 @@ Usage:
     python merge-voice.py --ogg
 
 - Reads `ENGLISH.IDX` as an array of little-endian `DWORD` offsets.
-- For each non-zero entry, opens `VOICES/sample-N.flac`, `VOICES/sample-N.mp3` or `VOICES/sample-N.ogg` and writes its raw bytes into the new SMP as `[length DWORD][flac data]`. No decoding is performed — the audio payload is embedded as-is.
+- For each entry, looks for `VOICES/sample-N.flac`, `VOICES/sample-N.mp3` or `VOICES/sample-N.ogg` (where `N` is the entry index). If the file exists, its raw bytes are written into the new SMP as `[length DWORD][payload data]`. No decoding is performed — the audio payload is embedded as-is.
 - Writes the corresponding byte offset into `ENGLISH-NEW.IDX`.
+- If no file is found for an entry, writes a zero (0) into the new IDX, preserving the original IDX structure (slot count and order stay the same).
 - `IDX[0]` (first 4 bytes of the new IDX) replaced with the ASCII signature `FLAC`, `MP3 ` or `OGG `.
 - The first 4 bytes of the new SMP are replaced with the ASCII signature `FLAC`, `MP3 ` or `OGG `. ScummVM checks this signature to know the sample data is compressed and routes it through `Audio::makeFLACStream` for FLAC (`Audio::makeMP3Stream` for MP3 or `Audio::makeVorbisStream` for OGG) instead of treating it as raw PCM.
+- If a file `VOICES/sample-N.xxx` exists on disk, it is encoded into the new SMP regardless of whether the original IDX had a non-zero entry for that slot. This lets you inject samples that were absent in the original game data — for example, voice lines restored from PSX version
 
   ## A note on sample parameters
 
@@ -148,11 +150,11 @@ Everything outside this table is identical across both versions. Samples themsel
 
 ### The sample-3649 split
 
-On PC, sample-3649 is a single file. On PSX, the same recording is split across two files: sample-3648 and sample-3649. Concatenating PSX sample-3648 + sample-3649 reproduces the full audio of PC sample-3649.
+On PC, sample-3649 is a single file. On PSX, the same recording is split across two files: sample-3648 and sample-3649. Concatenating PSX sample-3648 + sample-3649 reproduces the full audio of PC sample-3649. It may be a bug in PC version, someone need to check ingame audio/text sync.
 
-### Building a PC SMP from PSX samples
+### Building an identical PC SMP from PSX samples
 
-To reassemble `ENGLISH.SMP` for the PC version using sound data taken from the PSX version, you need the **PC** `ENGLISH.IDX` and the **PC** sample numbering. That means:
+To reassemble `ENGLISH.SMP` for the PC version using sound data taken from the PSX version one by one (no new samples no missing samples), you need the **PC** `ENGLISH.IDX` and the **PC** sample numbering. That means:
 
 0. **Unpack** PC `ENGLISH.SMP` into different folder, cross-check PC and PSX samples.
 1. **Remove** the PSX-exclusive samples (sample-108, sample-3264 and so on) so they don't occupy slots the PC build doesn't expect.
@@ -170,3 +172,13 @@ Get-ChildItem *.wav | ForEach-Object {
 ```
 
 The resulting compressed files must be placed in the `VOICES/` folder. Now put `VOICES/` folder and original PC `ENGLISH.IDX` near the script `merge-voice-dw1-compressed.py` and run it.
+
+### Building a PC SMP from PSX samples with added sounds
+I made a research on PC and PSX differences compared samples to ENGLISH.TXT (placed in `research\DW1 - PC vs PSX text&audio.xlsx`) and made a suggestion what we can added missing sound from PSX version to PC
+
+0. **Unpack** PC and PSX `ENGLISH.SMP` into different folders.
+1. **Take** PSX unpacked samples as base
+2. **Add** PC-exclusive samples (sample-5894, sample-5895 and so on)
+3. **Convert** WAV to FLAC/MP3/OGG
+4. The resulting compressed files must be placed in the `VOICES/` folder. Now put `VOICES/` folder and original PC `ENGLISH.IDX` near the script `merge-voice-dw1-compressed.py` and **run** it. Script will inform you `Added: 17 samples found in VOICES/ that had zero entry in original IDX` you added additional samples
+5. **Run the game and enjoy**
